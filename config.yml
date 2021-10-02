@@ -1,27 +1,22 @@
-cf_account_id: fbbebdb1eed350f2a05f517e1d80915f
-cf_access_team: eidam
+cf_account_id: fbbebdb1eed350f2a05f517e1d80915f # Cloudflare Account ID
+cf_access_team: eidam # Cloudflare for Teams name
 cf_access_aud: d27389ecd9bdc9c651bdadea01b6d9f835269f94fa3be1a9f9a4a5c755a1a0f9
 
 jwt_ttl: 600 # TTL of the generated JWT tokens, in seconds
 
 clients: 
-  - name: "My test app"
-    client_id: clientId1 # should not be guessable, you can get for example uuidv4 from https://uuid.rocks/plain
-    client_secret_key: SECRET_SOMETHING_SOMETHING # should be set with'wragler secret put SECRET_SOMETHING_SOMETHING' (could be also uuid)
+  - name: "Workers oidc example"
+    client_id: b78f6b19-50ca-4bab-85bf-93e6c51ff8fb # should not be guessable, you can get for example uuidv4 from https://uuid.rocks/plain
+    client_secret_key: SECRET_WORKERS_OIDC_EXAMPLE # should be set with 'wragler secret put SECRET_SOMETHING_SOMETHING' (could be also uuid)
     redirect_uris:
-      - https://oidcdebugger.com/debug
-      - https://openidconnect.net/callback
-      - https://psteniusubi.github.io/oidc-tester/authorization-code-flow.html
+      - https://workers-oidc-example.eidam.workers.dev/auth
     cors_origins:
-      - https://psteniusubi.github.io
+      - https://workers-oidc-example.eidam.workers.dev
   
-  - name: "My test app 2"
-    client_id: clientId2 # should not be guessable, you can get for example uuidv4 from https://uuid.rocks/plain
-    client_secret_key: SECRET_CLIENT_ID_2 # should be set with'wragler secret put SECRET_SOMETHING_SOMETHING' (could be also uuid)
+  - name: "HashiCorp Vault"
+    client_id: 96c02d1c-af05-482c-a9c9-2eec5ee30cf1 # should not be guessable, you can get for example uuidv4 from https://uuid.rocks/plain
+    client_secret_key: SECRET_VAULT # should be set with 'wragler secret put SECRET_VAULT' (could be also uuid)
     redirect_uris:
       - https://vault.eidam.dev/ui/vault/auth/oidc/oidc/callback
-      - http://10.142.0.16:8200/ui/vault/auth/oidc/oidc/callback
       - http://localhost:8250/oidc/callback
       - http://127.0.0.1:8250/oidc/callback
-    cors_origins:
-      - https://psteniusubi.github.io
