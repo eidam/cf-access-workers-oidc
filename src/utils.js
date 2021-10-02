@@ -2,15 +2,15 @@ import { base64url } from 'rfc4648'
 import jwt_decode from 'jwt-decode'
 import config from '../config.yml'
 
-export const getClientConfig = (clientId) => {
-  return config.clients.find((x) => x.client_id === clientId)
+export const getClientConfig = clientId => {
+  return config.clients.find(x => x.client_id === clientId)
 }
 
 export const getClientSecret = (clientSecretKey, env) => {
   return env[clientSecretKey]
 }
 
-export const dateInSecs = (d) => Math.ceil(Number(d) / 1000)
+export const dateInSecs = d => Math.ceil(Number(d) / 1000)
 
 export const getResponse = (body, status = 200, headers = {}) => {
   return new Response(typeof body !== 'string' ? JSON.stringify(body) : body, {
@@ -38,7 +38,7 @@ export const getAllowedOrigin = (req, clientId) => {
   let allowOrigin
 
   if ((clientId = '*')) {
-    allowOrigin = config.clients.some((client) =>
+    allowOrigin = config.clients.some(client =>
       client.cors_origins?.includes(reqOrigin),
     )
   } else {
@@ -49,7 +49,10 @@ export const getAllowedOrigin = (req, clientId) => {
 }
 
 export const verifyJwtSignature = (jwsObject, jwk) => {
-  const jwsSigningInput = jwsObject.split('.').slice(0, 2).join('.')
+  const jwsSigningInput = jwsObject
+    .split('.')
+    .slice(0, 2)
+    .join('.')
   const jwsSignature = jwsObject.split('.')[2]
   return crypto.subtle
     .importKey(
@@ -62,7 +65,7 @@ export const verifyJwtSignature = (jwsObject, jwk) => {
       false,
       ['verify'],
     )
-    .then((key) =>
+    .then(key =>
       crypto.subtle.verify(
         { name: 'RSASSA-PKCS1-v1_5' },
         key,
@@ -72,13 +75,13 @@ export const verifyJwtSignature = (jwsObject, jwk) => {
     )
 }
 
-export const obj2encStr = (object) => {
+export const obj2encStr = object => {
   return base64url.stringify(new TextEncoder().encode(JSON.stringify(object)), {
     pad: false,
   })
 }
 
-export const str2ab = (str) => {
+export const str2ab = str => {
   const buf = new ArrayBuffer(str.length)
   const bufView = new Uint8Array(buf)
   for (let i = 0, strLen = str.length; i < strLen; i++) {
@@ -87,12 +90,12 @@ export const str2ab = (str) => {
   return buf
 }
 
-export const getIssuer = (req) => {
+export const getIssuer = req => {
   const url = new URL(req.url)
   return `https://${url.hostname}`
 }
 
-export const generateKeyPair = async (keyAlg) => {
+export const generateKeyPair = async keyAlg => {
   const keyPair = await crypto.subtle.generateKey(keyAlg, true, [
     'sign',
     'verify',
@@ -107,7 +110,7 @@ export const generateKeyPair = async (keyAlg) => {
   return { privateKey: keyPair.privateKey, publicKey }
 }
 
-export const getDoStub = (env) => {
+export const getDoStub = env => {
   const oidcDoId = env.DO_OIDC.idFromName('oidc')
   return env.DO_OIDC.get(oidcDoId)
 }
@@ -150,7 +153,20 @@ const getCloudflareAccessJwk = async (kid, env) => {
   const apiRes = await fetch(
     `https://${config.cf_access_team}.cloudflareaccess.com/cdn-cgi/access/certs`,
   )
-  return (await apiRes.json()).keys.find((x) => x.kid === kid)
+  return (await apiRes.json()).keys.find(x => x.kid === kid)
+}
+
+// Get Cloudflare Access Identity
+export const getCloudflareAccessIdentity = async access_token => {
+  const identity = await fetch(
+    `https://${config.cf_account_team}.cloudflareaccess.com/cdn-cgi/access/get-identity`,
+    {
+      headers: {
+        cookie: `CF_Authorization=${access_token}`,
+      },
+    },
+  )
+  return await identity.json()
 }
 
 // Get Cloudflare Access groups and filter them for an email
@@ -166,14 +182,15 @@ export const getCloudflareAccessGroups = async (email, env) => {
 
   const groups = (await apiRes.json()).result
   const groupsMatch = groups
-    .filter((group) =>
+    .filter(group =>
       group.include.find(
-        (rule) =>
+        rule =>
           rule.email?.email === email ||
-          rule.email_domain?.domain === email.split('@')[1],
+          rule.email_domain?.domain === email.split('@')[1] ||
+          rule.everyone,
       ),
     )
-    .map((group) => group.name)
+    .map(group => group.name)
 
   return groupsMatch
 }

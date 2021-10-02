@@ -1,6 +1,10 @@
 name = "openid-connect"
 type = "javascript"
-workers_dev = true
+workers_dev = false
+compatibility_date = "2021-10-02"
+
+#zone_id = "your-zone-id"
+#routes = ["oidc.example.com/*"]
 
 [durable_objects]
 classes = [
@@ -12,8 +16,9 @@ crons = ["* * * * *"]
 
 [build]
 command = "yarn install && yarn build"
-upload_format = "modules"
 cwd = "."
 watch_dir = "src"
-upload_dir = "dist"
-upload_exclude = ["*.map"]
+
+[build.upload]
+format = "modules"
+main = "main.mjs"

@@ -4,13 +4,14 @@ import {
   getClientConfig,
   getClientSecret,
   getCloudflareAccessGroups,
+  getCloudflareAccessIdentity,
   getCorsHeaders,
   getDoStub,
   getIssuer,
   getResponse,
   verifyCloudflareAccessJwt,
 } from './utils'
-export { OpenIDConnectDurableObject } from './oidc-do.mjs'
+export { OpenIDConnectDurableObject } from './oidc-do'
 
 const router = Router()
 router.get('/.well-known/openid-configuration', (req, env) =>
@@ -93,15 +94,7 @@ async function handleUserInfo(req, env) {
     return getResponse({ err: 'Missing Bearer token' }, 400, corsHeaders)
   const access_token = authorization.substring(7, authorization.length)
 
-  const identityRes = await fetch(
-    `https://${config.cf_account_team}.cloudflareaccess.com/cdn-cgi/access/get-identity`,
-    {
-      headers: {
-        cookie: `CF_Authorization=${access_token}`,
-      },
-    },
-  )
-  const identity = await identityRes.json()
+  const identity = await getCloudflareAccessIdentity(access_token)
 
   if (identity.err) {
     return getResponse(identity.err, 401, corsHeaders)
@@ -118,14 +111,20 @@ async function handleUserInfo(req, env) {
 
 async function handleToken(req, env) {
   const body = await req.text()
-  let formData = new URLSearchParams(body)
-  const {
-    grant_type,
-    client_id,
-    client_secret,
-    redirect_uri,
-    code,
-  } = Object.fromEntries(formData)
+  let data
+
+  switch (req.headers.get('content-type')) {
+    case 'application/json':
+      data = JSON.parse(body)
+      break
+    case 'application/x-www-form-urlencoded':
+      data = Object.fromEntries(new URLSearchParams(body))
+      break
+    default:
+      data = Object.fromEntries(new URLSearchParams(body))
+  }
+
+  const { grant_type, client_id, client_secret, redirect_uri, code } = data
   const corsHeaders = getCorsHeaders(getAllowedOrigin(req, client_id))
   const clientConfig = getClientConfig(client_id)
 
@@ -189,11 +188,14 @@ async function handleAuthorize(req, env) {
   const issuer = getIssuer(req)
   // Fetch Cloudflare API and get Cloudflare Access Groups for user email
   const groups = await getCloudflareAccessGroups(result.payload.email, env)
+  // Fetch Cloudflare Identity
+  const identity = await getCloudflareAccessIdentity(access_jwt)
   // Construct new JWT payload
   const payload = {
     iss: issuer,
-    aud: [client_id],
+    aud: client_id,
     azp: client_id,
+    name: identity.name,
     email: result.payload.email,
     sub: result.payload.sub,
     country: result.payload.country,

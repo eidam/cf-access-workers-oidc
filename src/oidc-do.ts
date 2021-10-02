@@ -1,5 +1,4 @@
 import { Router } from 'itty-router'
-import { v4 as uuidv4 } from 'uuid'
 import {
   dateInSecs,
   generateKeyPair,
@@ -8,7 +7,9 @@ import {
   str2ab,
 } from './utils'
 import { base64url } from 'rfc4648'
+// @ts-ignore
 import config from './../config.yml'
+import { Env, ExchangeCode, Jwk, PrivateKey } from './types'
 
 const keyAlg = {
   name: 'RSASSA-PKCS1-v1_5',
@@ -18,7 +19,18 @@ const keyAlg = {
 }
 
 export class OpenIDConnectDurableObject {
-  constructor(state, env) {
+  state: DurableObjectState
+  storage: DurableObjectStorage
+  env: Env
+
+  jwtTtl: number
+
+  privateKey: PrivateKey
+  codes: Map<string, ExchangeCode>
+  jwks:  Map<string, Jwk>
+  router: Router<any>
+
+  constructor(state: DurableObjectState, env: Env) {
     this.state = state
     this.storage = state.storage
     this.env = env
@@ -32,19 +44,18 @@ export class OpenIDConnectDurableObject {
       this.jwks = await this.storage.list()
 
       const router = Router()
-      router.post('/sign', (req) => this.handleSign(req))
-      router.get('/exchange/:code', (req) => this.handleExchangeCode(req))
-      router.get('/jwks', (req) => this.handleGetJwks(req))
-      router.patch('/jwks', (req) => this.handleCleanupJwks(req))
+      router.post('/sign', req => this.handleSign(req))
+      router.get('/exchange/:code', req => this.handleExchangeCode(req))
+      router.get('/jwks', req => this.handleGetJwks(req))
+      router.patch('/jwks', req => this.handleCleanupJwks(req))
 
-      router.all('/', (req) => getResponse(null, 400))
+      router.all('/', req => getResponse(null, 400))
       this.router = router
     })
   }
 
-  async fetch(req) {
+  async fetch(req: Request) {
     try {
-      // @ts-ignore
       return this.router.handle(req)
     } catch (e) {
       return getResponse(e, 500)
@@ -76,7 +87,8 @@ export class OpenIDConnectDurableObject {
     // Generate new private key if there is none
     if (!this.privateKey) {
       const { privateKey, publicKey } = await generateKeyPair(keyAlg)
-      const kid = uuidv4()
+      // @ts-ignore
+      const kid = crypto.randomUUID()
 
       this.privateKey = {
         id: kid,
@@ -128,11 +140,12 @@ export class OpenIDConnectDurableObject {
 
     let code
     if (generateExchangeCode) {
-      code = uuidv4()
+      // @ts-ignore
+      code = crypto.randomUUID()
       this.codes.set(code, {
         id_token,
         access_token,
-        expires_in: 60, // exchange code lives in Durable Object memory only
+        expires_at: payload.exp, // access_token is original Cloudflare Access JWT, so pass the original exp
       })
     }
 
@@ -148,13 +161,13 @@ export class OpenIDConnectDurableObject {
 
   // Cleanup public keys we wont need anymore
   handleCleanupJwks(req) {
-    this.jwks.forEach((jwk, kid) => {
+    this.jwks.forEach((jwk:Jwk, kid:string) => {
       if (
         this.privateKey?.id !== kid &&
         jwk.last_signature + this.jwtTtl < dateInSecs(new Date())
       ) {
         this.jwks.delete(kid)
-        this.state.waitUntil(this.storage.delete(kid))
+        this.storage.delete(kid)
       }
     })
 

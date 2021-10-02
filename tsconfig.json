@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "lib": ["esnext", "webworker"],
+    "types": ["@cloudflare/workers-types"]
+  }
+}
