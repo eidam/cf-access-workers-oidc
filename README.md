@@ -8,7 +8,7 @@ Almost stateless OpenID Connect provider completely running on top of Cloudflare
 - Only OIDC public keys (jwks) are persisted in Durable Object storage for signature verification purposes. Public keys are automatically cleaned up using CRON Triggers once they are no longer needed.
 - Cloudflare Access API is used to fetch and filter user's Access groups, then passed within the ID token as group claims. Applications can scope user permissions based on their groups.
 
-There are spme example applications using this OIDC provider, feel free to try them out!
+There are some example applications using this OIDC provider, feel free to try them out!
 
 - https://vault.eidam.dev/ui/vault/auth?with=oidc
     - or with Vault CLI `vault login -method=oidc -address=https://vault.eidam.dev`
