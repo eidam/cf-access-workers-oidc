@@ -11,6 +11,7 @@ Almost stateless OpenID Connect provider completely running on top of Cloudflare
 There are spme example applications using this OIDC provider, feel free to try them out!
 
 - https://vault.eidam.dev/ui/vault/auth?with=oidc
+    - or with Vault CLI `vault login -method=oidc -address=https://vault.eidam.dev`
 - https://workers-oidc-example.eidam.workers.dev
 
 ![Worker example app](.github/images/worker-example-app.png)
